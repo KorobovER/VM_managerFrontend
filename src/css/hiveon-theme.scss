@@ -1,0 +1,311 @@
+
+.hiveon-title, .hiveon-card-title, .q-card__title {
+  color: var(--hiveon-accent);
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  margin-bottom: 20px;
+}
+
+:root {
+  --hiveon-bg: #181c23;
+  --hiveon-bg-soft: #202533;
+  --hiveon-card: #23283a;
+  --hiveon-card-gradient: linear-gradient(135deg, #23283a 75%, #222738 100%);
+  --hiveon-header: #23283a;
+  --hiveon-shadow: 0 8px 32px 0 rgba(18, 22, 31, 0.16), 0 1.5px 12px 0 rgba(36,48,60,.13);
+  --hiveon-radius: 18px;
+  --hiveon-radius-lg: 24px;
+  --hiveon-text: #f4f6fb;
+  --hiveon-text-secondary: #aab9ce;
+  --hiveon-accent: #29496d;
+  --hiveon-accent2: #ffbb54;
+  --hiveon-green: #1e886a;
+  --hiveon-danger: #e25353;
+  --hiveon-chip-green: #23e39b;
+  --hiveon-chip-red: #fa5959;
+  --hiveon-chip-bg: #222c36;
+}
+
+body, #q-app {
+  background: var(--hiveon-bg) !important;
+  color: var(--hiveon-text);
+  font-family: 'Inter', 'Segoe UI', Arial, sans-serif;
+}
+
+/* Карточки */
+.hiveon-card, .q-card {
+  background: var(--hiveon-card-gradient), var(--hiveon-card) !important;
+  border-radius: var(--hiveon-radius-lg);
+  box-shadow: var(--hiveon-shadow);
+  color: var(--hiveon-text);
+  padding: 32px 38px 24px 38px;
+  margin-bottom: 36px;
+  border: none;
+  transition: box-shadow 0.2s, background 0.2s;
+  min-width: 320px;
+}
+
+.hiveon-card:hover {
+  box-shadow: 0 12px 38px 0 rgba(40, 208, 250, 0.11), 0 2px 16px 0 rgba(36,48,60,.15);
+  background: linear-gradient(135deg, #23283a 68%, #202533 100%);
+}
+
+/* Заголовки */
+/* Гибкая сетка */
+.hiveon-dashboard {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  max-width: 820px;
+  margin: 0 auto 0 auto;
+  padding: 0 12px;
+}
+
+.hiveon-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+@media (max-width: 670px) {
+  .hiveon-dashboard { max-width: 98vw; }
+  .hiveon-card { padding: 20px 8px; min-width: 0; }
+  .hiveon-row { flex-direction: column; gap: 12px; }
+}
+
+/* --- КНОПКИ --- */
+.hiveon-btn {
+  min-width: 120px;
+  min-height: 44px;
+  padding: 0 26px;
+  font-size: 1rem;
+  font-weight: 600;
+  background: #232e3e;
+  color: #f4f6fb;
+  border: none;
+  border-radius: 14px;
+  box-shadow: 0 2px 10px 0 rgba(30, 46, 62, 0.10);
+  transition: background 0.17s, color 0.17s, box-shadow 0.17s, transform 0.12s;
+  cursor: pointer;
+  margin-right: 8px;
+  margin-bottom: 4px;
+  letter-spacing: 0.01em;
+}
+.hiveon-btn:last-child { margin-right: 0; }
+
+.hiveon-btn:hover:not(:disabled) {
+  background: #29496d;
+  color: #fff;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 6px 18px 0 rgba(40, 208, 250, 0.11);
+}
+
+.hiveon-btn:active:not(:disabled) {
+  background: #1c2330;
+  color: #fff;
+  box-shadow: 0 2px 8px 0 rgba(40,208,250,0.07);
+}
+
+.hiveon-btn:disabled {
+  background: #2a2e3d;
+  color: var(--hiveon-text-secondary);
+  cursor: not-allowed;
+  opacity: 0.75;
+}
+
+.hiveon-btn.accent {
+  background: #1e886a;
+  color: #fff;
+}
+.hiveon-btn.accent:hover:not(:disabled) {
+  background: #23a47e;
+}
+
+.hiveon-btn.danger {
+  background: #e25353;
+  color: #fff;
+}
+.hiveon-btn.danger:hover:not(:disabled) {
+  background: #ff6565;
+}
+
+/* Селекты */
+.hiveon-select {
+  min-width: 160px;
+  min-height: 44px;
+  background: var(--hiveon-bg-soft);
+  border: none;
+  border-radius: 14px;
+  color: var(--hiveon-text);
+  font-size: 1rem;
+  padding: 0 20px;
+  box-shadow: 0 2px 12px 0 rgba(20, 22, 31, 0.08);
+  transition: box-shadow 0.2s, border 0.2s;
+  appearance: none;
+}
+.hiveon-select:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--hiveon-accent);
+}
+
+/* Статусы */
+.hiveon-status-value {
+  font-size: 1.85rem;
+  font-weight: 700;
+  margin-top: 3px;
+  margin-bottom: 2px;
+  color: var(--hiveon-accent2);
+  text-shadow: 0 1px 3px rgba(25, 204, 130, 0.07);
+}
+.hiveon-status-value.green { color: var(--hiveon-green); }
+
+
+/* --- Логи действий --- */
+.hiveon-logs-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 270px;
+  overflow-y: auto;
+}
+.hiveon-log-item {
+  font-size: 0.97rem;
+  margin-bottom: 7px;
+  color: var(--hiveon-text-secondary);
+  border-bottom: 1px dashed #28344a44;
+  padding-bottom: 5px;
+}
+.hiveon-log-item:last-child { border-bottom: none; }
+.log-time {
+  color: #7dc6fa;
+  margin-right: 4px;
+}
+.log-host {
+  color: var(--hiveon-accent2);
+  margin-right: 4px;
+}
+.log-action {
+  color: var(--hiveon-accent);
+  margin-right: 2px;
+}
+.log-status {
+  font-weight: 600;
+}
+.log-status.error, .log-status.failed { color: var(--hiveon-danger); }
+.log-status.success, .log-status.done, .log-status.ok { color: var(--hiveon-green); }
+.log-empty { color: #45546a; font-style: italic; }
+
+.hiveon-dashboard-wrap {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 38px;
+}
+
+.hiveon-dashboard-log {
+  position: relative;
+  min-width: 260px;
+  max-width: 320px;
+  margin-left: 32px;
+  height: fit-content;
+}
+
+@media (max-width: 1100px) {
+  .hiveon-dashboard-wrap { flex-direction: column; }
+  .hiveon-dashboard-log {
+  position: relative;
+  min-width: 260px;
+  max-width: 320px;
+  margin-left: 32px;
+  height: fit-content;
+}
+}
+
+
+/* --- Hiveon custom select with arrow --- */
+.hiveon-select-wrap {
+  position: relative;
+  display: inline-block;
+  width: 100%;
+}
+
+.hiveon-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  padding-right: 32px;
+  background: #fff;
+  border: 1px solid #bbb;
+  border-radius: 6px;
+  font-size: 1rem;
+  outline: none;
+  transition: border 0.2s;
+  min-width: 150px;
+  height: 36px;
+}
+
+.hiveon-select:focus {
+  border: 1.5px solid #5096f2;
+}
+
+.hiveon-select-arrow {
+  pointer-events: none;
+  position: absolute;
+  top: 50%;
+  right: 14px;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+}
+
+.hiveon-select-arrow::before {
+  content: '';
+  display: block;
+  width: 0;
+  height: 0;
+  border-left: 7px solid transparent;
+  border-right: 7px solid transparent;
+  border-top: 7px solid #888;
+}
+
+
+/* --- Hiveon custom select: dark theme & arrow via ::after --- */
+.hiveon-select-wrap {
+  position: relative;
+  width: 100%;
+  display: inline-block;
+}
+.hiveon-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  width: 100%;
+  background: #232738;
+  color: #e0e6f5;
+  border: 1.5px solid #343950;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  padding: 10px 36px 10px 16px;
+  height: 40px;
+  outline: none;
+  box-shadow: 0 4px 32px #0005;
+  transition: border 0.2s, background 0.2s;
+}
+.hiveon-select:focus {
+  border: 1.5px solid #4b8ef3;
+  background: #293046;
+}
+.hiveon-select-wrap::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  right: 16px;
+  width: 18px;
+  height: 18px;
+  pointer-events: none;
+  background: url('data:image/svg+xml;utf8,<svg fill="white" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path d="M7 10l5 5 5-5z"/></svg>') no-repeat center;
+  transform: translateY(-50%);
+  opacity: 0.7;
+}
