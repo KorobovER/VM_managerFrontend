@@ -1,4 +1,3 @@
-
 <template>
   <div class="hiveon-dashboard-wrap">
     <div class="hiveon-dashboard">
@@ -7,9 +6,10 @@
         <div class="hiveon-card-title">Серверы</div>
         <div class="hiveon-row">
           <div class="hiveon-select-wrap">
-  <select v-model="selectedServer" class="hiveon-select">
-            <option v-for="srv in servers" :key="srv" :value="srv">{{ srv }}</option>
-          </select></div>
+            <select v-model="selectedServer" class="hiveon-select">
+              <option v-for="srv in servers" :key="srv" :value="srv">{{ srv }}</option>
+            </select>
+          </div>
           <button @click="fetchVMs" class="hiveon-btn">Запросить список ВМ</button>
         </div>
       </div>
@@ -18,10 +18,12 @@
         <div class="hiveon-card-title">Запущенные виртуалки</div>
         <div class="hiveon-row">
           <div class="hiveon-select-wrap">
-  <select v-model="selectedRunningVM" class="hiveon-select">
-            <option v-for="vm in runningVMs" :key="vm" :value="vm">{{ vm }}</option>
-          </select></div>
+            <select v-model="selectedRunningVM" class="hiveon-select">
+              <option v-for="vm in runningVMs" :key="vm" :value="vm">{{ vm }}</option>
+            </select>
+          </div>
           <button @click="fetchRunningVMs" class="hiveon-btn">Показать запущенные ВМ</button>
+          <button @click="launchApp" class="hiveon-btn success">Запустить приложение</button>
           <button @click="stopRunningVM" class="hiveon-btn accent">Грохнуть виртуалку</button>
           <button @click="forceStopRunningVM" class="hiveon-btn danger">Жёстко отключить</button>
         </div>
@@ -31,9 +33,10 @@
         <div class="hiveon-card-title">Виртуалки на выбранном сервере</div>
         <div class="hiveon-row">
           <div class="hiveon-select-wrap">
-  <select v-model="selectedVM" class="hiveon-select">
-            <option v-for="vm in vms" :key="vm.name" :value="vm.name">{{ vm.name }} ({{ vm.state }})</option>
-          </select></div>
+            <select v-model="selectedVM" class="hiveon-select">
+              <option v-for="vm in vms" :key="vm.name" :value="vm.name">{{ vm.name }} ({{ vm.state }})</option>
+            </select>
+          </div>
           <button @click="runVM" class="hiveon-btn">Запустить выбранную ВМ</button>
           <button v-if="vmJustStarted" class="hiveon-btn accent" disabled>ВМ запускается...</button>
         </div>
@@ -46,11 +49,13 @@
             <div class="hiveon-status-value">{{ servers.length }}</div>
           </div>
           <div style="min-width: 130px;">
-            <div class="hiveon-card-title" style="font-size: 1rem; color: var(--hiveon-text-secondary)">Виртуалок на сервере</div>
+            <div class="hiveon-card-title" style="font-size: 1rem; color: var(--hiveon-text-secondary)">Виртуалок на
+              сервере</div>
             <div class="hiveon-status-value">{{ vms.length }}</div>
           </div>
           <div style="min-width: 130px;">
-            <div class="hiveon-card-title" style="font-size: 1rem; color: var(--hiveon-text-secondary)">Запущено ВМ</div>
+            <div class="hiveon-card-title" style="font-size: 1rem; color: var(--hiveon-text-secondary)">Запущено ВМ
+            </div>
             <div class="hiveon-status-value green">{{ runningVMs.length }}</div>
           </div>
         </div>
@@ -92,10 +97,17 @@ export default {
   created() {
     axios.get('/api/vms/list').then(res => {
       this.servers = res.data.vms || [];
-    if (this.servers.length) this.selectedServer = this.servers[0];
-    }).catch(() => {});
+      if (this.servers.length) this.selectedServer = this.servers[0];
+    }).catch(() => { });
   },
   methods: {
+    async launchApp() {
+      try {
+        window.location.href = 'crystalcloudeapp://launch';
+      } catch {
+        alert('Ошибка при запуске приложения');
+      }
+    },
     openLauncher() {
       window.location.href = `gcloud://${this.selectedVM}`;
       this.vmJustStarted = false;
@@ -161,14 +173,14 @@ export default {
       if (!this.selectedServer) return;
       let res = await axios.get(`/api/vms/running?vm=${this.selectedServer}`);
       this.runningVMs = res.data.running_vms || [];
-    if (this.runningVMs && this.runningVMs.length) this.selectedRunningVM = this.runningVMs[0];
+      if (this.runningVMs && this.runningVMs.length) this.selectedRunningVM = this.runningVMs[0];
     },
     async fetchVMs() {
       if (!this.selectedServer) return;
       await axios.get(`/api/vms/available?vm=${this.selectedServer}`);
       let res = await axios.get(`/api/vms/cached?vm=${this.selectedServer}`);
       this.vms = res.data.vms;
-    if (this.vms && this.vms.length) this.selectedVM = this.vms[0].name;
+      if (this.vms && this.vms.length) this.selectedVM = this.vms[0].name;
     },
     async runVM() {
       if (!this.selectedServer || !this.selectedVM) return alert("Выберите ВМ!");
@@ -182,7 +194,7 @@ export default {
           ...res.data
         });
         alert(`ВМ ${res.data.vm} запущена на сервере ${res.data.host} — статус: ${res.data.status}`);
-		    // --- Запуск ланчера через протокол сразу после запуска ВМ ---
+        // --- Запуск ланчера через протокол сразу после запуска ВМ ---
         window.location.href = `gcloud://${this.selectedVM}`;
       } catch {
         this.logs.unshift({
