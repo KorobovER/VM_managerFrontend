@@ -103,9 +103,19 @@ export default {
   methods: {
     async launchApp() {
       try {
-        window.location.href = 'crystalcloudeapp://launch';
-      } catch {
-        alert('Ошибка при запуске приложения');
+        const res = await axios.post('/proxy/start?vm_ip=172.20.1.196&video_port=55554');
+
+        if (res.data.status === 'proxy_started' || res.data.status === 'proxy_worked') {
+          const proxyPort = res.data.proxy_port;
+          const connectionAddress = res.data.connection_address;
+
+          window.location.href = `crystalcloudeapp://launch?host=${connectionAddress}&port=${proxyPort}`;
+          alert(`Прокси запущен на ${connectionAddress}:${proxyPort}`);
+        } else {
+          alert('Ошибка при инициализации прокси');
+        }
+      } catch (error) {
+        alert('Ошибка при запуске приложения: ' + error.message);
       }
     },
     openLauncher() {
@@ -194,8 +204,6 @@ export default {
           ...res.data
         });
         alert(`ВМ ${res.data.vm} запущена на сервере ${res.data.host} — статус: ${res.data.status}`);
-        // --- Запуск ланчера через протокол сразу после запуска ВМ ---
-        window.location.href = `gcloud://${this.selectedVM}`;
       } catch {
         this.logs.unshift({
           time: new Date().toLocaleString(),
