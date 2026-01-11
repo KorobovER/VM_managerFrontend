@@ -105,16 +105,25 @@ export default {
       try {
         const res = await axios.post('/proxy/start?vm_ip=172.20.1.196&video_port=55554');
 
+        console.log('Ответ от /proxy/start:', res.data);
+
         if (res.data.status === 'proxy_started' || res.data.status === 'proxy_worked') {
           const proxyPort = res.data.proxy_port;
           const connectionAddress = res.data.connection_address;
 
-          window.location.href = `crystalcloudeapp://launch?host=${connectionAddress}&port=${proxyPort}`;
-          alert(`Прокси запущен на ${connectionAddress}:${proxyPort}`);
+          console.log('proxyPort:', proxyPort, 'connectionAddress:', connectionAddress);
+
+          if (proxyPort && connectionAddress) {
+            window.location.href = `crystalcloudeapp://?-i=${connectionAddress}&-p=${proxyPort}`;
+            alert(`Прокси запущен на ${connectionAddress}:${proxyPort}. Запуск CrystalCloudeClient с параметрами: -i ${connectionAddress} -p ${proxyPort}`);
+          } else {
+            alert(`Ошибка: хост или порт не получены. Ответ: ${JSON.stringify(res.data)}`);
+          }
         } else {
-          alert('Ошибка при инициализации прокси');
+          alert(`Ошибка при инициализации прокси. Статус: ${res.data.status}`);
         }
       } catch (error) {
+        console.error('Ошибка при запуске приложения:', error);
         alert('Ошибка при запуске приложения: ' + error.message);
       }
     },
