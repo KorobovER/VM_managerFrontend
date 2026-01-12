@@ -144,9 +144,10 @@ export default {
       if (!confirm(`Вы действительно хотите ЖЁСТКО отключить виртуалку "${this.selectedRunningVM}"?`)) return;
       try {
         let res = await axios.post('/api/vms/force_stop', {
+          vm_host: this.currentServer.host,
+          vm_name: this.selectedRunningVM,
           host: this.currentServer.host,
-          port: this.currentServer.port,
-          vm_name: this.selectedRunningVM
+          port: this.currentServer.port
         });
         this.logs.unshift({
           time: new Date().toLocaleString(),
@@ -154,7 +155,8 @@ export default {
         });
         alert(`ВМ ${res.data.vm} ЖЁСТКО отключена на сервере ${res.data.host} — статус: ${res.data.status}`);
         await this.fetchRunningVMs();
-      } catch {
+      } catch (error) {
+        console.error('Ошибка force_stop:', error.response?.data);
         this.logs.unshift({
           time: new Date().toLocaleString(),
           action: 'force_stop',
@@ -162,7 +164,8 @@ export default {
           host: this.currentServer?.name || 'unknown',
           status: 'error'
         });
-        alert('Ошибка жёсткого выключения ВМ');
+        const errorMsg = error.response?.data?.detail || 'Ошибка жёсткого выключения ВМ';
+        alert(errorMsg);
       }
     },
     async stopRunningVM() {
@@ -173,9 +176,10 @@ export default {
       if (!confirm(`Вы действительно хотите выключить виртуалку "${this.selectedRunningVM}"?`)) return;
       try {
         let res = await axios.post('/api/vms/stop', {
+          vm_host: this.currentServer.host,
+          vm_name: this.selectedRunningVM,
           host: this.currentServer.host,
-          port: this.currentServer.port,
-          vm_name: this.selectedRunningVM
+          port: this.currentServer.port
         });
         this.logs.unshift({
           time: new Date().toLocaleString(),
@@ -184,7 +188,8 @@ export default {
         alert(`ВМ ${res.data.vm} выключена на сервере ${res.data.host} — статус: ${res.data.status}`);
         // обновим список запущенных ВМ
         await this.fetchRunningVMs();
-      } catch {
+      } catch (error) {
+        console.error('Ошибка stop:', error.response?.data);
         this.logs.unshift({
           time: new Date().toLocaleString(),
           action: 'stop',
@@ -192,7 +197,8 @@ export default {
           host: this.currentServer?.name || 'unknown',
           status: 'error'
         });
-        alert('Ошибка выключения ВМ');
+        const errorMsg = error.response?.data?.detail || 'Ошибка выключения ВМ';
+        alert(errorMsg);
       }
     },
     async fetchRunningVMs() {
@@ -216,16 +222,18 @@ export default {
       if (!this.currentServer || !this.selectedVM) return alert("Выберите ВМ!");
       try {
         let res = await axios.post('/api/vms/start', {
+          vm_host: this.currentServer.host,
+          vm_name: this.selectedVM,
           host: this.currentServer.host,
-          port: this.currentServer.port,
-          vm_name: this.selectedVM
+          port: this.currentServer.port
         });
         this.logs.unshift({
           time: new Date().toLocaleString(),
           ...res.data
         });
         alert(`ВМ ${res.data.vm} запущена на сервере ${res.data.host} — статус: ${res.data.status}`);
-      } catch {
+      } catch (error) {
+        console.error('Ошибка start:', error.response?.data);
         this.logs.unshift({
           time: new Date().toLocaleString(),
           action: 'start',
@@ -233,7 +241,8 @@ export default {
           host: this.currentServer?.name || 'unknown',
           status: 'error'
         });
-        alert('Ошибка запуска ВМ');
+        const errorMsg = error.response?.data?.detail || 'Ошибка запуска ВМ';
+        alert(errorMsg);
       }
     }
   }
