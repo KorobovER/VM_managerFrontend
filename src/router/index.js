@@ -1,5 +1,10 @@
 import { defineRouter } from '#q-app/wrappers'
-import { createRouter, createMemoryHistory, createWebHistory, createWebHashHistory } from 'vue-router'
+import {
+  createRouter,
+  createMemoryHistory,
+  createWebHistory,
+  createWebHashHistory,
+} from 'vue-router'
 import routes from './routes'
 
 /*
@@ -14,7 +19,9 @@ import routes from './routes'
 export default defineRouter(function (/* { store, ssrContext } */) {
   const createHistory = process.env.SERVER
     ? createMemoryHistory
-    : (process.env.VUE_ROUTER_MODE === 'history' ? createWebHistory : createWebHashHistory)
+    : process.env.VUE_ROUTER_MODE === 'history'
+      ? createWebHistory
+      : createWebHashHistory
 
   const Router = createRouter({
     scrollBehavior: () => ({ left: 0, top: 0 }),
@@ -23,7 +30,44 @@ export default defineRouter(function (/* { store, ssrContext } */) {
     // Leave this as is and make changes in quasar.conf.js instead!
     // quasar.conf.js -> build -> vueRouterMode
     // quasar.conf.js -> build -> publicPath
-    history: createHistory(process.env.VUE_ROUTER_BASE)
+    history: createHistory(process.env.VUE_ROUTER_BASE),
+  })
+
+  Router.beforeEach(async (to, from, next) => {
+    const token = localStorage.getItem('access_token')
+    const requiresAuth = to.matched.some((record) => record.meta.requiresAuth)
+    const requiresAdmin = to.matched.some((record) => record.meta.requiresAdmin)
+
+    if (requiresAuth && !token) {
+      next('/login')
+      return
+    }
+
+    if (requiresAdmin && token) {
+      try {
+        const { useAuthStore } = await import('src/stores/auth')
+        const authStore = useAuthStore()
+
+        if (!authStore.state.user) {
+          await authStore.fetchUser()
+        }
+
+        if (!authStore.isAdmin.value) {
+          next('/')
+          return
+        }
+      } catch {
+        next('/login')
+        return
+      }
+    }
+
+    if (to.path === '/login' && token) {
+      next('/')
+      return
+    }
+
+    next()
   })
 
   return Router

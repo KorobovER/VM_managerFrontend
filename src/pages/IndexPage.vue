@@ -7,7 +7,7 @@
         <div class="hiveon-row">
           <div class="hiveon-select-wrap">
             <select v-model="selectedServer" class="hiveon-select">
-              <option v-for="srv in servers" :key="srv" :value="srv">{{ srv }}</option>
+              <option v-for="srv in servers" :key="srv.id" :value="srv.id">{{ srv.name }}</option>
             </select>
           </div>
           <button @click="fetchVMs" class="hiveon-btn">Запросить список ВМ</button>
@@ -86,7 +86,7 @@ export default {
     return {
       vmJustStarted: false,
       servers: [],
-      selectedServer: "",
+      selectedServer: null,
       vms: [],
       selectedVM: "",
       logs: [],
@@ -94,10 +94,15 @@ export default {
       selectedRunningVM: ""
     }
   },
+  computed: {
+    currentServer() {
+      return this.servers.find(s => s.id === this.selectedServer);
+    }
+  },
   created() {
-    axios.get('/api/vms/list').then(res => {
-      this.servers = res.data.vms || [];
-      if (this.servers.length) this.selectedServer = this.servers[0];
+    axios.get('/api/servers').then(res => {
+      this.servers = res.data || [];
+      if (this.servers.length) this.selectedServer = this.servers[0].id;
     }).catch(() => { });
   },
   methods: {
@@ -132,14 +137,15 @@ export default {
       this.vmJustStarted = false;
     },
     async forceStopRunningVM() {
-      if (!this.selectedServer || !this.selectedRunningVM) {
+      if (!this.currentServer || !this.selectedRunningVM) {
         alert("Выберите сервер и виртуалку для жёсткого отключения!");
         return;
       }
       if (!confirm(`Вы действительно хотите ЖЁСТКО отключить виртуалку "${this.selectedRunningVM}"?`)) return;
       try {
         let res = await axios.post('/api/vms/force_stop', {
-          vm_host: this.selectedServer,
+          host: this.currentServer.host,
+          port: this.currentServer.port,
           vm_name: this.selectedRunningVM
         });
         this.logs.unshift({
@@ -153,21 +159,22 @@ export default {
           time: new Date().toLocaleString(),
           action: 'force_stop',
           vm: this.selectedRunningVM,
-          host: this.selectedServer,
+          host: this.currentServer?.name || 'unknown',
           status: 'error'
         });
         alert('Ошибка жёсткого выключения ВМ');
       }
     },
     async stopRunningVM() {
-      if (!this.selectedServer || !this.selectedRunningVM) {
+      if (!this.currentServer || !this.selectedRunningVM) {
         alert("Выберите сервер и виртуалку для выключения!");
         return;
       }
       if (!confirm(`Вы действительно хотите выключить виртуалку "${this.selectedRunningVM}"?`)) return;
       try {
         let res = await axios.post('/api/vms/stop', {
-          vm_host: this.selectedServer,
+          host: this.currentServer.host,
+          port: this.currentServer.port,
           vm_name: this.selectedRunningVM
         });
         this.logs.unshift({
@@ -182,30 +189,35 @@ export default {
           time: new Date().toLocaleString(),
           action: 'stop',
           vm: this.selectedRunningVM,
-          host: this.selectedServer,
+          host: this.currentServer?.name || 'unknown',
           status: 'error'
         });
         alert('Ошибка выключения ВМ');
       }
     },
     async fetchRunningVMs() {
-      if (!this.selectedServer) return;
-      let res = await axios.get(`/api/vms/running?vm=${this.selectedServer}`);
+      if (!this.currentServer) return;
+      let res = await axios.get(`/api/vms/running?host=${this.currentServer.host}&port=${this.currentServer.port}`);
       this.runningVMs = res.data.running_vms || [];
       if (this.runningVMs && this.runningVMs.length) this.selectedRunningVM = this.runningVMs[0];
     },
     async fetchVMs() {
-      if (!this.selectedServer) return;
-      await axios.get(`/api/vms/available?vm=${this.selectedServer}`);
-      let res = await axios.get(`/api/vms/cached?vm=${this.selectedServer}`);
-      this.vms = res.data.vms;
-      if (this.vms && this.vms.length) this.selectedVM = this.vms[0].name;
+      if (!this.currentServer) return;
+      try {
+        let res = await axios.get(`/api/vms/available?host=${this.currentServer.host}&port=${this.currentServer.port}`);
+        this.vms = res.data.vms || [];
+        if (this.vms && this.vms.length) this.selectedVM = this.vms[0].name;
+      } catch (error) {
+        console.error('Ошибка загрузки VM:', error);
+        alert('Ошибка при загрузке списка виртуальных машин');
+      }
     },
     async runVM() {
-      if (!this.selectedServer || !this.selectedVM) return alert("Выберите ВМ!");
+      if (!this.currentServer || !this.selectedVM) return alert("Выберите ВМ!");
       try {
         let res = await axios.post('/api/vms/start', {
-          vm_host: this.selectedServer,
+          host: this.currentServer.host,
+          port: this.currentServer.port,
           vm_name: this.selectedVM
         });
         this.logs.unshift({
@@ -218,7 +230,7 @@ export default {
           time: new Date().toLocaleString(),
           action: 'start',
           vm: this.selectedVM,
-          host: this.selectedServer,
+          host: this.currentServer?.name || 'unknown',
           status: 'error'
         });
         alert('Ошибка запуска ВМ');
