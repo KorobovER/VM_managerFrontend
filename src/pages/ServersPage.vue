@@ -31,9 +31,51 @@
                         <span class="value">{{ formatDate(server.created_at) }}</span>
                     </div>
                 </div>
+                <div class="server-actions">
+                    <button @click="openEditDialog(server)" class="hiveon-btn warning" title="Редактировать сервер">
+                        ✏️ Редактировать
+                    </button>
+                    <button @click="deleteServer(server)" class="hiveon-btn danger" title="Удалить сервер">
+                        🗑️ Удалить
+                    </button>
+                </div>
             </div>
         </div>
 
+        <!-- Диалог редактирования сервера -->
+        <div v-if="showEditDialog" class="modal-overlay" @click="closeEditDialog">
+            <div class="modal-content" @click.stop>
+                <div class="modal-header">
+                    <h2>Редактировать сервер</h2>
+                    <button @click="closeEditDialog" class="close-btn">&times;</button>
+                </div>
+                <form @submit.prevent="updateServer" class="server-form">
+                    <div class="form-group">
+                        <label>Название сервера</label>
+                        <input v-model="editingServer.name" type="text" required class="form-input" />
+                    </div>
+                    <div class="form-group">
+                        <label>Хост (IP адрес)</label>
+                        <input v-model="editingServer.host" type="text" required class="form-input" />
+                    </div>
+                    <div class="form-group">
+                        <label>Порт</label>
+                        <input v-model.number="editingServer.port" type="number" required class="form-input" />
+                    </div>
+                    <div class="form-group">
+                        <label>Пользователь</label>
+                        <input v-model="editingServer.user" type="text" required class="form-input" />
+                    </div>
+                    <div v-if="editError" class="error-message">{{ editError }}</div>
+                    <div class="form-actions">
+                        <button type="button" @click="closeEditDialog" class="hiveon-btn">Отмена</button>
+                        <button type="submit" class="hiveon-btn warning">Сохранить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Диалог добавления сервера -->
         <div v-if="showAddDialog" class="modal-overlay" @click="closeDialog">
             <div class="modal-content" @click.stop>
                 <div class="modal-header">
@@ -70,14 +112,25 @@
 
 <script>
 import { ref, onMounted } from 'vue'
+import { useQuasar } from 'quasar'
 import axios from 'axios'
 
 export default {
     setup() {
+        const $q = useQuasar()
         const servers = ref([])
         const showAddDialog = ref(false)
+        const showEditDialog = ref(false)
         const error = ref('')
+        const editError = ref('')
         const newServer = ref({
+            name: '',
+            host: '',
+            port: 16509,
+            user: 'vmuser'
+        })
+        const editingServer = ref({
+            id: null,
             name: '',
             host: '',
             port: 16509,
@@ -115,6 +168,95 @@ export default {
             }
         }
 
+        const openEditDialog = (server) => {
+            editingServer.value = {
+                id: server.id,
+                name: server.name,
+                host: server.host,
+                port: server.port,
+                user: server.user
+            }
+            showEditDialog.value = true
+            editError.value = ''
+        }
+
+        const closeEditDialog = () => {
+            showEditDialog.value = false
+            editError.value = ''
+            editingServer.value = {
+                id: null,
+                name: '',
+                host: '',
+                port: 16509,
+                user: 'vmuser'
+            }
+        }
+
+        const updateServer = async () => {
+            editError.value = ''
+            try {
+                const response = await axios.put(`/api/servers/${editingServer.value.id}`, {
+                    name: editingServer.value.name,
+                    host: editingServer.value.host,
+                    port: editingServer.value.port,
+                    user: editingServer.value.user
+                })
+                const index = servers.value.findIndex(s => s.id === editingServer.value.id)
+                if (index !== -1) {
+                    servers.value[index] = response.data
+                }
+                $q.notify({
+                    type: 'positive',
+                    message: `Сервер "${response.data.name}" успешно обновлён`,
+                    position: 'top-right',
+                    icon: 'check_circle',
+                    timeout: 2500
+                })
+                closeEditDialog()
+            } catch (err) {
+                editError.value = err.response?.data?.detail || 'Ошибка при обновлении сервера'
+            }
+        }
+
+        const deleteServer = async (server) => {
+            $q.dialog({
+                title: 'Подтверждение удаления',
+                message: `Вы действительно хотите удалить сервер "${server.name}"?`,
+                cancel: {
+                    label: 'Отмена',
+                    color: 'grey',
+                    flat: true
+                },
+                ok: {
+                    label: 'Удалить',
+                    color: 'negative',
+                    flat: true
+                },
+                persistent: true
+            }).onOk(async () => {
+                try {
+                    await axios.delete(`/api/servers/${server.id}`)
+                    servers.value = servers.value.filter(s => s.id !== server.id)
+                    $q.notify({
+                        type: 'positive',
+                        message: `Сервер "${server.name}" успешно удалён`,
+                        position: 'top-right',
+                        icon: 'check_circle',
+                        timeout: 2500
+                    })
+                } catch (err) {
+                    const errorMsg = err.response?.data?.detail || 'Ошибка при удалении сервера'
+                    $q.notify({
+                        type: 'negative',
+                        message: errorMsg,
+                        position: 'top-right',
+                        timeout: 3000
+                    })
+                    console.error('Ошибка удаления сервера:', err)
+                }
+            })
+        }
+
         const formatDate = (dateString) => {
             return new Date(dateString).toLocaleString('ru-RU')
         }
@@ -126,10 +268,17 @@ export default {
         return {
             servers,
             showAddDialog,
+            showEditDialog,
             error,
+            editError,
             newServer,
+            editingServer,
             addServer,
             closeDialog,
+            openEditDialog,
+            closeEditDialog,
+            updateServer,
+            deleteServer,
             formatDate
         }
     }
@@ -347,5 +496,34 @@ export default {
 .hiveon-btn.success:hover {
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+}
+
+.hiveon-btn.danger {
+    background: linear-gradient(135deg, #fc8181 0%, #f56565 100%);
+    color: white;
+}
+
+.hiveon-btn.danger:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(252, 129, 129, 0.3);
+}
+
+.hiveon-btn.warning {
+    background: linear-gradient(135deg, #f6ad55 0%, #ed8936 100%);
+    color: white;
+}
+
+.hiveon-btn.warning:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(246, 173, 85, 0.3);
+}
+
+.server-actions {
+    margin-top: 16px;
+    padding-top: 16px;
+    border-top: 1px solid #e2e8f0;
+    display: flex;
+    gap: 8px;
+    justify-content: space-between;
 }
 </style>
