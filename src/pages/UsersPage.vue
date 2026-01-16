@@ -117,11 +117,13 @@
 
 <script>
 import { ref, onMounted } from 'vue'
+import { useQuasar } from 'quasar'
 import { api } from 'src/boot/axios'
 
 export default {
   name: 'UsersPage',
   setup() {
+    const $q = useQuasar()
     const users = ref([])
     const loading = ref(false)
     const errorDialog = ref(false)
@@ -250,7 +252,13 @@ export default {
         console.log('VM assigned successfully:', response.data)
 
         // Показываем уведомление об успехе
-        alert(`ВМ "${vmAssignment.value.vm_name}" успешно назначена пользователю "${selectedUser.value.username}"`)
+        $q.notify({
+          type: 'positive',
+          message: `ВМ "${vmAssignment.value.vm_name}" успешно назначена пользователю "${selectedUser.value.username}"`,
+          position: 'top-right',
+          icon: 'check_circle',
+          timeout: 2500
+        })
 
         closeAssignDialog()
       } catch (error) {
@@ -267,6 +275,7 @@ export default {
     })
 
     return {
+      $q,
       users,
       loading,
       errorDialog,

@@ -11,6 +11,11 @@ const routes = [
       {
         path: '',
         component: () => import('pages/IndexPage.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true },
+      },
+      {
+        path: 'my-vms',
+        component: () => import('pages/MyVMsPage.vue'),
         meta: { requiresAuth: true },
       },
       {

@@ -6,7 +6,8 @@
           <span class="hiveon-logo">VM Manager</span>
         </q-toolbar-title>
         <div class="nav-links">
-          <router-link to="/" class="nav-link">Виртуальные машины</router-link>
+          <router-link v-if="isAdmin" to="/" class="nav-link">Виртуальные машины</router-link>
+          <router-link to="/my-vms" class="nav-link">Мои ВМ</router-link>
           <router-link v-if="isAdmin" to="/servers" class="nav-link">Серверы</router-link>
           <router-link v-if="isAdmin" to="/users" class="nav-link">Пользователи</router-link>
           <router-link v-if="isAdmin" to="/register" class="nav-link">Регистрация</router-link>

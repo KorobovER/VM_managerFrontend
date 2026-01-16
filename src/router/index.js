@@ -53,7 +53,7 @@ export default defineRouter(function (/* { store, ssrContext } */) {
         }
 
         if (!authStore.isAdmin.value) {
-          next('/')
+          next('/my-vms')
           return
         }
       } catch {
@@ -63,8 +63,25 @@ export default defineRouter(function (/* { store, ssrContext } */) {
     }
 
     if (to.path === '/login' && token) {
-      next('/')
-      return
+      try {
+        const { useAuthStore } = await import('src/stores/auth')
+        const authStore = useAuthStore()
+
+        if (!authStore.state.user) {
+          await authStore.fetchUser()
+        }
+
+        // Редирект в зависимости от роли
+        if (authStore.isAdmin.value) {
+          next('/')
+        } else {
+          next('/my-vms')
+        }
+        return
+      } catch {
+        next('/login')
+        return
+      }
     }
 
     next()
