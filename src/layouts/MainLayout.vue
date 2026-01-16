@@ -8,6 +8,7 @@
         <div class="nav-links">
           <router-link to="/" class="nav-link">Виртуальные машины</router-link>
           <router-link v-if="isAdmin" to="/servers" class="nav-link">Серверы</router-link>
+          <router-link v-if="isAdmin" to="/users" class="nav-link">Пользователи</router-link>
           <router-link v-if="isAdmin" to="/register" class="nav-link">Регистрация</router-link>
         </div>
         <div class="user-info">

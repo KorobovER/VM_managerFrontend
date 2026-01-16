@@ -23,6 +23,11 @@ const routes = [
         component: () => import('pages/RegisterPage.vue'),
         meta: { requiresAuth: true, requiresAdmin: true },
       },
+      {
+        path: 'users',
+        component: () => import('pages/UsersPage.vue'),
+        meta: { requiresAuth: true, requiresAdmin: true },
+      },
     ],
   },
 
