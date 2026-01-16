@@ -451,7 +451,6 @@ export default {
   transition: all 0.2s;
   background: #e2e8f0;
   color: #2d3748;
-  flex: 1;
 }
 
 .hiveon-btn:hover:not(:disabled) {
