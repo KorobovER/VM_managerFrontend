@@ -10,6 +10,8 @@
             <option :value="null" disabled>Выберите сервер</option>
             <option v-for="srv in servers" :key="srv.id" :value="srv.id">
               {{ srv.name }} ({{ srv.host }})
+              <span v-if="srv.ping === -1">❌ Недоступен</span>
+              <span v-else>🟢 {{ Number(srv.ping).toFixed(3) }}ms</span>
             </option>
           </select>
         </div>
@@ -217,16 +219,27 @@ export default {
     }
   },
   created() {
-    axios.get('/api/servers').then(res => {
-      this.servers = res.data || [];
-      if (this.servers.length) {
-        this.selectedServer = this.servers[0].id;
-        this.onServerChange();
-      }
-    }).catch(() => { });
+    this.fetchServers();
   },
   methods: {
+    async fetchServers() {
+      try {
+        const response = await axios.get('/api/servers');
+        this.servers = response.data;
+        if (this.servers.length) {
+          this.selectedServer = this.servers[0].id;
+          this.onServerChange();
+        }
+      } catch (err) {
+        console.error('Ошибка загрузки серверов:', err);
+      }
+    },
+
     async onServerChange() {
+      this.vms = [];
+      this.runningVMs = [];
+      this.selectedVM = "";
+      this.selectedRunningVM = "";
       if (this.currentServer) {
         await this.fetchVMs();
         await this.fetchRunningVMs();
@@ -415,6 +428,8 @@ export default {
         if (this.runningVMs && this.runningVMs.length) this.selectedRunningVM = this.runningVMs[0];
       } catch (error) {
         console.error('Ошибка загрузки запущенных VM:', error);
+        this.runningVMs = [];
+        this.selectedRunningVM = "";
       } finally {
         this.loading.fetchRunning = false;
       }
@@ -428,6 +443,8 @@ export default {
         if (this.vms && this.vms.length) this.selectedVM = this.vms[0].name;
       } catch (error) {
         console.error('Ошибка загрузки VM:', error);
+        this.vms = [];
+        this.selectedVM = "";
         this.$q.notify({
           type: 'negative',
           message: 'Ошибка при загрузке списка виртуальных машин',
