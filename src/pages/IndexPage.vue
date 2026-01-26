@@ -90,11 +90,19 @@
                   <span v-if="loading.startVM[vm.name]">⏳ Запуск...</span>
                   <span v-else>▶️ Запустить</span>
                 </button>
-                <button v-else @click.stop="launchApp(vm.name)" class="btn-action btn-connect"
-                  :disabled="loading.launchApp[vm.name]">
-                  <span v-if="loading.launchApp[vm.name]">⏳ Подключение...</span>
-                  <span v-else>🚀 Подключиться</span>
-                </button>
+                <div v-else class="vm-running-actions">
+                  <button @click.stop="startAppOnVM(vm)" class="btn-action btn-start-app"
+                    :disabled="loading.startApp[vm.name] || isAppButtonDisabled(vm.name)" title="Запустить приложение">
+                    <span v-if="loading.startApp[vm.name]">⏳ Запуск...</span>
+                    <span v-else-if="loading.checkReady[vm.name]">🔄 Проверка...</span>
+                    <span v-else>📱 Приложение</span>
+                  </button>
+                  <button @click.stop="launchApp(vm.name)" class="btn-action btn-connect"
+                    :disabled="loading.launchApp[vm.name]" title="Подключиться к ВМ">
+                    <span v-if="loading.launchApp[vm.name]">⏳ Подключение...</span>
+                    <span v-else>🚀 Подключиться</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -128,6 +136,12 @@
                 <div class="running-vm-name">{{ vm }}</div>
               </div>
               <div class="running-vm-actions">
+                <button @click.stop="startAppOnVM({ name: vm })" class="btn-action-small btn-start-app"
+                  title="Запустить приложение" :disabled="loading.startApp[vm] || isAppButtonDisabled(vm)">
+                  <span v-if="loading.startApp[vm]">⏳ Запуск...</span>
+                  <span v-else-if="loading.checkReady[vm]">🔄 Проверка...</span>
+                  <span v-else>📱 Приложение</span>
+                </button>
                 <button @click.stop="launchApp(vm)" class="btn-action-small btn-connect" title="Подключиться"
                   :disabled="loading.launchApp[vm]">
                   <span v-if="loading.launchApp[vm]">⏳ Подключение...</span>
@@ -187,6 +201,7 @@
 <script>
 import axios from "axios";
 import { useQuasar } from 'quasar';
+import { api } from 'src/boot/axios';
 
 export default {
   setup() {
@@ -203,19 +218,28 @@ export default {
       logs: [],
       runningVMs: [],
       selectedRunningVM: "",
+      vmReadyStates: {}, // Состояния готовности ВМ
       loading: {
         fetchVMs: false,
         fetchRunning: false,
         startVM: {},
         stopVM: {},
         forceStopVM: {},
-        launchApp: {}
+        launchApp: {},
+        startApp: {},
+        checkReady: {} // Добавляем загрузку для проверки готовности
       }
     }
   },
   computed: {
     currentServer() {
       return this.servers.find(s => s.id === this.selectedServer);
+    },
+    isAppButtonDisabled() {
+      return (vmName) => {
+        // Кнопка неактивна если ВМ не готова
+        return !this.vmReadyStates[vmName];
+      };
     }
   },
   created() {
@@ -248,6 +272,110 @@ export default {
     formatTime(timeString) {
       const date = new Date(timeString);
       return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    },
+    async checkVMReady(vmName) {
+      const vmIP = this.getVMIP();
+      if (!vmIP) return false;
+
+      this.loading.checkReady[vmName] = true;
+      try {
+        const response = await api.post('/api/vms/ready', null, {
+          params: { vm_ip: vmIP }
+        });
+
+        const isReady = response.data.ready;
+        this.vmReadyStates[vmName] = isReady;
+
+        return isReady;
+      } catch (error) {
+        console.error('Ошибка проверки готовности ВМ:', error);
+        this.vmReadyStates[vmName] = false;
+        return false;
+      } finally {
+        this.loading.checkReady[vmName] = false;
+      }
+    },
+    getVMIP() {
+      // Временный маппинг хоста к IP ВМ
+      const hostToVmIP = {
+        '172.20.0.198': '172.20.1.196',
+        '172.20.0.199': '172.20.1.197'
+      };
+
+      return hostToVmIP[this.currentServer.host] || '172.20.1.196';
+    },
+    async startAppOnVM(vm) {
+      const vmName = vm.name;
+      console.log('VM object:', vm); // Для отладки - смотрим структуру VM
+
+      // Сначала проверяем готовность ВМ
+      const isReady = await this.checkVMReady(vmName);
+
+      if (!isReady) {
+        this.$q.notify({
+          type: 'warning',
+          message: `ВМ "${vmName}" еще не готова к запуску приложений`,
+          position: 'top-right',
+          icon: 'warning',
+          timeout: 3000
+        });
+        return;
+      }
+
+      // Временный маппинг хоста к IP ВМ (пока не найдем как получить IP из VM объекта)
+      const hostToVmIP = {
+        '172.20.0.198': '172.20.1.196',
+        '172.20.0.199': '172.20.1.197'
+      };
+
+      const vmIP = hostToVmIP[this.currentServer.host] || '172.20.1.196'; // fallback
+
+      console.log('Using VM IP:', vmIP, 'for host:', this.currentServer.host);
+
+      this.loading.startApp[vmName] = true;
+      try {
+        const response = await api.post('/api/vms/start-app', null, {
+          params: {
+            vm_ip: vmIP,
+            app_path: 'C:\\CloudServer\\CrystalCloudServer.exe'
+          }
+        });
+
+        // Добавляем задержку для обработки ответа
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        if (response.data.app_started) {
+          this.$q.notify({
+            type: 'positive',
+            message: `Приложение успешно запущено на ВМ "${vmName}"`,
+            position: 'top-right',
+            icon: 'check_circle',
+            timeout: 2500
+          });
+          this.addLog('start_app', vmName, 'success');
+        } else {
+          this.$q.notify({
+            type: 'warning',
+            message: `Не удалось запустить приложение на ВМ "${vmName}"`,
+            position: 'top-right',
+            icon: 'warning',
+            timeout: 3000
+          });
+          this.addLog('start_app', vmName, 'error');
+        }
+      } catch (error) {
+        console.error('Ошибка запуска приложения:', error);
+        const errorMsg = error.response?.data?.detail || error.response?.data?.message || 'Ошибка при запуске приложения';
+        this.$q.notify({
+          type: 'negative',
+          message: errorMsg,
+          position: 'top-right',
+          timeout: 3000
+        });
+        this.addLog('start_app', vmName, 'error');
+      } finally {
+        this.loading.startApp[vmName] = false;
+      }
     },
     async launchApp(vmName = null) {
       const vm = vmName || this.selectedRunningVM;
@@ -400,6 +528,10 @@ export default {
             icon: 'check_circle',
             timeout: 2500
           });
+
+          // Очищаем состояние готовности при остановке ВМ
+          delete this.vmReadyStates[vm];
+
           await this.fetchRunningVMs();
           await this.fetchVMs();
         } catch (error) {
@@ -426,6 +558,11 @@ export default {
         let res = await axios.get(`/api/vms/running?host=${this.currentServer.host}&port=${this.currentServer.port}`);
         this.runningVMs = res.data.running_vms || [];
         if (this.runningVMs && this.runningVMs.length) this.selectedRunningVM = this.runningVMs[0];
+
+        // Проверяем готовность для всех запущенных ВМ
+        for (const vmName of this.runningVMs) {
+          await this.checkVMReady(vmName);
+        }
       } catch (error) {
         console.error('Ошибка загрузки запущенных VM:', error);
         this.runningVMs = [];
@@ -441,6 +578,13 @@ export default {
         let res = await axios.get(`/api/vms/available?host=${this.currentServer.host}&port=${this.currentServer.port}`);
         this.vms = res.data.vms || [];
         if (this.vms && this.vms.length) this.selectedVM = this.vms[0].name;
+
+        // Проверяем готовность для запущенных ВМ в основной сетке
+        for (const vm of this.vms) {
+          if (vm.state === 'running') {
+            await this.checkVMReady(vm.name);
+          }
+        }
       } catch (error) {
         console.error('Ошибка загрузки VM:', error);
         this.vms = [];
@@ -482,6 +626,10 @@ export default {
           icon: 'check_circle',
           timeout: 2500
         });
+
+        // Сбрасываем состояние готовности ВМ при запуске
+        this.vmReadyStates[vm] = false;
+
         await this.fetchVMs();
         await this.fetchRunningVMs();
       } catch (error) {
@@ -842,6 +990,16 @@ export default {
   gap: 8px;
 }
 
+.vm-running-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.vm-running-actions .btn-action {
+  flex: 1;
+}
+
 .btn-action {
   flex: 1;
   padding: 10px 16px;
@@ -855,6 +1013,11 @@ export default {
 
 .btn-start {
   background: #48bb78;
+  color: white;
+}
+
+.btn-start-app {
+  background: #38a169;
   color: white;
 }
 
@@ -953,6 +1116,10 @@ export default {
   gap: 6px;
   white-space: nowrap;
   color: white;
+}
+
+.btn-action-small.btn-start-app {
+  background: #48bb78;
 }
 
 .btn-action-small.btn-connect {
