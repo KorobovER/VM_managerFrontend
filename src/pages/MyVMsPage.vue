@@ -55,6 +55,10 @@
             title="Подключиться к ВМ">
             {{ actionLoading[vm.name] ? '🔄 Подключение...' : '🚀 Подключиться' }}
           </button>
+          <button v-if="vm.state === 'running'" @click="connectRDP(vm)" class="hiveon-btn warning"
+            :disabled="actionLoading[vm.name]" title="Подключиться по РДП">
+            {{ actionLoading[vm.name] ? '🔄 РДП...' : '🖥️ РДП' }}
+          </button>
         </div>
       </div>
     </div>

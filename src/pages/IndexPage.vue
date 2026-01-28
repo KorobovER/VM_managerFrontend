@@ -102,6 +102,11 @@
                     <span v-if="loading.launchApp[vm.name]">⏳ Подключение...</span>
                     <span v-else>🚀 Подключиться</span>
                   </button>
+                  <button @click.stop="launchRDP(vm.name)" class="btn-action btn-rdp"
+                    :disabled="loading.launchRDP[vm.name]" title="Подключиться по РДП">
+                    <span v-if="loading.launchRDP[vm.name]">⏳ РДП...</span>
+                    <span v-else>🖥️ РДП</span>
+                  </button>
                 </div>
               </div>
             </div>
@@ -146,6 +151,11 @@
                   :disabled="loading.launchApp[vm]">
                   <span v-if="loading.launchApp[vm]">⏳ Подключение...</span>
                   <span v-else>🚀 Подключиться</span>
+                </button>
+                <button @click.stop="launchRDP(vm)" class="btn-action-small btn-rdp" title="Подключиться по РДП"
+                  :disabled="loading.launchRDP[vm]">
+                  <span v-if="loading.launchRDP[vm]">⏳ РДП...</span>
+                  <span v-else>🖥️ РДП</span>
                 </button>
                 <button @click.stop="stopRunningVM(vm)" class="btn-action-small btn-stop" title="Остановить"
                   :disabled="loading.stopVM[vm]">
@@ -226,6 +236,7 @@ export default {
         stopVM: {},
         forceStopVM: {},
         launchApp: {},
+        launchRDP: {},
         startApp: {},
         checkReady: {} // Добавляем загрузку для проверки готовности
       }
@@ -419,6 +430,99 @@ export default {
         });
       } finally {
         this.loading.launchApp[vm] = false;
+      }
+    },
+    async launchRDP(vmName = null) {
+      const vm = vmName || this.selectedRunningVM;
+      this.loading.launchRDP[vm] = true;
+      try {
+        const gamePath = 'C:\\Users\\ggg\\Desktop\\G-SYNC Pendulum Demo.lnk';
+        const res = await axios.post(`/proxy/rdp/start?vm_ip=172.20.1.196&game_path=${encodeURIComponent(gamePath)}`);
+
+        if (res.data.status === 'tunnel_started') {
+          const rdpCommand = res.data.rdp_command;
+          const tunnelHost = res.data.tunnel_host;
+          const tunnelPort = res.data.tunnel_port;
+
+          if (rdpCommand && tunnelHost && tunnelPort) {
+            this.$q.notify({
+              type: 'positive',
+              message: `РДП туннель запущен: ${tunnelHost}:${tunnelPort}`,
+              position: 'top-right',
+              icon: 'check_circle',
+              timeout: 3000
+            });
+
+            this.$q.dialog({
+              title: '🖥️ Подключение по РДП',
+              message: `Туннель готов к подключению<br><strong>Адрес:</strong> ${tunnelHost}:${tunnelPort}<br><br>Учетные данные:<br><strong>Пользователь:</strong> ggg<br><strong>Пароль:</strong> 123<br><br>Игра будет запущена автоматически при подключении.`,
+              html: true,
+              ok: {
+                label: '� Подключиться',
+                color: 'primary'
+              },
+              cancel: {
+                label: 'Закрыть',
+                color: 'grey'
+              }
+            }).onOk(() => {
+              this.executeRDPCommand(rdpCommand);
+            });
+
+            this.addLog('launch_rdp', vmName || this.selectedRunningVM, 'success');
+          } else {
+            this.addLog('launch_rdp', vmName || this.selectedRunningVM, 'error');
+            this.$q.notify({
+              type: 'negative',
+              message: 'Ошибка: команда подключения не получена',
+              position: 'top-right',
+              timeout: 3000
+            });
+          }
+        } else {
+          this.addLog('launch_rdp', vmName || this.selectedRunningVM, 'error');
+          this.$q.notify({
+            type: 'negative',
+            message: 'Ошибка при инициализации РДП туннеля',
+            position: 'top-right',
+            timeout: 3000
+          });
+        }
+      } catch (error) {
+        console.error('Ошибка при запуске РДП:', error);
+        this.addLog('launch_rdp', vmName || this.selectedRunningVM, 'error');
+        this.$q.notify({
+          type: 'negative',
+          message: 'Ошибка при запуске РДП: ' + error.message,
+          position: 'top-right',
+          timeout: 4000
+        });
+      } finally {
+        this.loading.launchRDP[vm] = false;
+      }
+    },
+    executeRDPCommand(rdpCommand) {
+      console.log('executeRDPCommand вызвана с командой:', rdpCommand);
+      const match = rdpCommand.match(/mstsc \/v:([^:]+):(\d+)/);
+      if (match) {
+        const host = match[1];
+        const port = match[2];
+        window.location.href = `rdp://${host}:${port}`;
+        console.log(`Запуск RDP: rdp://${host}:${port}`);
+        this.$q.notify({
+          type: 'positive',
+          message: 'RDP подключение инициировано',
+          position: 'top-right',
+          timeout: 2000
+        });
+      } else {
+        console.error('Не удалось распарсить RDP команду:', rdpCommand);
+        this.$q.notify({
+          type: 'negative',
+          message: 'Ошибка при парсинге RDP команды',
+          position: 'top-right',
+          timeout: 3000
+        });
       }
     },
     async forceStopRunningVM(vmName = null) {
@@ -1047,6 +1151,21 @@ export default {
   cursor: not-allowed;
 }
 
+.btn-rdp {
+  background: #4299e1;
+  color: white;
+}
+
+.btn-rdp:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(66, 153, 225, 0.3);
+}
+
+.btn-rdp:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 /* Запущенные VM */
 .running-vm-list {
   display: flex;
@@ -1124,6 +1243,10 @@ export default {
 
 .btn-action-small.btn-connect {
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.btn-action-small.btn-rdp {
+  background: #4299e1;
 }
 
 .btn-action-small.btn-stop {
