@@ -51,14 +51,17 @@
             :disabled="actionLoading[vm.name]" title="Запустить ВМ">
             {{ actionLoading[vm.name] ? '🔄 Запуск...' : '▶️ Запустить' }}
           </button>
-          <button v-else @click="connectVM(vm)" class="hiveon-btn info" :disabled="actionLoading[vm.name]"
-            title="Подключиться к ВМ">
-            {{ actionLoading[vm.name] ? '🔄 Подключение...' : '🚀 Подключиться' }}
-          </button>
-          <button v-if="vm.state === 'running'" @click="connectRDP(vm)" class="hiveon-btn warning"
-            :disabled="actionLoading[vm.name]" title="Подключиться по РДП">
-            {{ actionLoading[vm.name] ? '🔄 РДП...' : '🖥️ РДП' }}
-          </button>
+          <div v-else class="games-section">
+            <div class="games-header">
+              <span class="games-label">Доступные игры:</span>
+            </div>
+            <div class="games-list">
+              <button v-for="game in availableGames" :key="game" @click="launchGame(vm, game)"
+                class="hiveon-btn game-btn" :disabled="actionLoading[vm.name]" :title="`Запустить ${game}`">
+                {{ actionLoading[vm.name] ? '🔄 Запуск...' : `🎮 ${game}` }}
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -95,6 +98,7 @@ export default {
     const actionLoading = ref({})
     const errorDialog = ref(false)
     const errorMessage = ref('')
+    const availableGames = ref(['G-SYNC Pendulum Demo'])
 
     const fetchVMs = async () => {
       loading.value = true
@@ -211,6 +215,53 @@ export default {
       }
     }
 
+    const launchGame = async (vm, game) => {
+      actionLoading.value[vm.name] = true
+      try {
+        const gamePath = 'C:\\Users\\ggg\\Desktop\\G-SYNC Pendulum Demo.lnk'
+        const response = await api.post(`/proxy/rdp/start?vm_ip=172.20.1.196&game_path=${encodeURIComponent(gamePath)}`)
+
+        if (response.data.status === 'tunnel_started') {
+          const rdpCommand = response.data.rdp_command
+          const tunnelHost = response.data.tunnel_host
+          const tunnelPort = response.data.tunnel_port
+
+          if (rdpCommand && tunnelHost && tunnelPort) {
+            $q.dialog({
+              title: `🎮 Запуск ${game}`,
+              message: `Туннель готов к подключению<br><br><strong>Команда для выполнения в PowerShell:</strong><br><code>${rdpCommand}</code><br><br><strong>Адрес:</strong> ${tunnelHost}:${tunnelPort}<br><strong>Пользователь:</strong> ggg<br><strong>Пароль:</strong> 123<br><br>Игра будет запущена автоматически при подключении.`,
+              html: true,
+              ok: {
+                label: '🚀 Открыть PowerShell',
+                color: 'primary'
+              },
+              cancel: {
+                label: 'Закрыть',
+                color: 'grey'
+              }
+            }).onOk(() => {
+              window.location.href = 'powershell://'
+            })
+          } else {
+            throw new Error('Не получены параметры подключения')
+          }
+        } else {
+          throw new Error('Ошибка при инициализации туннеля')
+        }
+      } catch (error) {
+        console.error('Ошибка при запуске игры:', error)
+        const errorMsg = error.message || 'Ошибка при запуске игры'
+        $q.notify({
+          type: 'negative',
+          message: errorMsg,
+          position: 'top-right',
+          timeout: 4000
+        })
+      } finally {
+        actionLoading.value[vm.name] = false
+      }
+    }
+
     const formatDate = (dateString) => {
       return new Date(dateString).toLocaleString('ru-RU')
     }
@@ -226,10 +277,12 @@ export default {
       actionLoading,
       errorDialog,
       errorMessage,
+      availableGames,
       fetchVMs,
       closeErrorDialog,
       startVM,
       connectVM,
+      launchGame,
       formatDate
     }
   }
@@ -492,6 +545,39 @@ export default {
 
 .hiveon-btn.success:hover:not(:disabled) {
   box-shadow: 0 4px 12px rgba(72, 187, 120, 0.3);
+}
+
+.games-section {
+  width: 100%;
+}
+
+.games-header {
+  margin-bottom: 12px;
+}
+
+.games-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+.games-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.game-btn {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 12px 16px;
+  font-size: 14px;
+  flex: 1;
+}
+
+.game-btn:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+  transform: translateY(-2px);
 }
 
 .modal-overlay {

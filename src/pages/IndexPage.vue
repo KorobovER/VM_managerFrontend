@@ -85,27 +85,21 @@
                 </div>
               </div>
               <div class="vm-card-actions">
-                <button v-if="vm.state !== 'running'" @click.stop="runVM(vm.name)" class="btn-action btn-start"
+                <button v-if="vm.state !== 'running'" @click.stop="runVM(vm.name)" class="btn-action-small btn-start"
                   :disabled="loading.startVM[vm.name]">
                   <span v-if="loading.startVM[vm.name]">⏳ Запуск...</span>
                   <span v-else>▶️ Запустить</span>
                 </button>
                 <div v-else class="vm-running-actions">
-                  <button @click.stop="startAppOnVM(vm)" class="btn-action btn-start-app"
-                    :disabled="loading.startApp[vm.name] || isAppButtonDisabled(vm.name)" title="Запустить приложение">
-                    <span v-if="loading.startApp[vm.name]">⏳ Запуск...</span>
-                    <span v-else-if="loading.checkReady[vm.name]">🔄 Проверка...</span>
-                    <span v-else>📱 Приложение</span>
+                  <button @click.stop="stopRunningVM(vm.name)" class="btn-action-small btn-stop" title="Остановить"
+                    :disabled="loading.stopVM[vm.name]">
+                    <span v-if="loading.stopVM[vm.name]">⏳ Остановка...</span>
+                    <span v-else>⏹️ Остановить</span>
                   </button>
-                  <button @click.stop="launchApp(vm.name)" class="btn-action btn-connect"
-                    :disabled="loading.launchApp[vm.name]" title="Подключиться к ВМ">
-                    <span v-if="loading.launchApp[vm.name]">⏳ Подключение...</span>
-                    <span v-else>🚀 Подключиться</span>
-                  </button>
-                  <button @click.stop="launchRDP(vm.name)" class="btn-action btn-rdp"
-                    :disabled="loading.launchRDP[vm.name]" title="Подключиться по РДП">
-                    <span v-if="loading.launchRDP[vm.name]">⏳ РДП...</span>
-                    <span v-else>🖥️ РДП</span>
+                  <button @click.stop="forceStopRunningVM(vm.name)" class="btn-action-small btn-force-stop"
+                    title="Принудительно остановить" :disabled="loading.forceStopVM[vm.name]">
+                    <span v-if="loading.forceStopVM[vm.name]">⏳ Отключение...</span>
+                    <span v-else>⚠️ Жёстко</span>
                   </button>
                 </div>
               </div>
@@ -141,22 +135,39 @@
                 <div class="running-vm-name">{{ vm }}</div>
               </div>
               <div class="running-vm-actions">
-                <button @click.stop="startAppOnVM({ name: vm })" class="btn-action-small btn-start-app"
+                <div class="vm-status-indicator">
+                  <span v-if="loading.checkReady[vm]" class="status-badge status-checking">
+                    🔄 Проверка готовности...
+                  </span>
+                  <span v-else-if="vmReadyStates[vm]" class="status-badge status-ready">
+                    ✅ Готово к подключению
+                  </span>
+                  <span v-else class="status-badge status-loading">
+                    ⏳ Инициализация...
+                  </span>
+                </div>
+                <!-- <button @click.stop="startAppOnVM({ name: vm })" class="btn-action-small btn-start-app"
                   title="Запустить приложение" :disabled="loading.startApp[vm] || isAppButtonDisabled(vm)">
                   <span v-if="loading.startApp[vm]">⏳ Запуск...</span>
                   <span v-else-if="loading.checkReady[vm]">🔄 Проверка...</span>
                   <span v-else>📱 Приложение</span>
-                </button>
-                <button @click.stop="launchApp(vm)" class="btn-action-small btn-connect" title="Подключиться"
+                </button> -->
+                <!-- <button @click.stop="launchApp(vm)" class="btn-action-small btn-connect" title="Подключиться"
                   :disabled="loading.launchApp[vm]">
                   <span v-if="loading.launchApp[vm]">⏳ Подключение...</span>
                   <span v-else>🚀 Подключиться</span>
-                </button>
-                <button @click.stop="launchRDP(vm)" class="btn-action-small btn-rdp" title="Подключиться по РДП"
-                  :disabled="loading.launchRDP[vm]">
-                  <span v-if="loading.launchRDP[vm]">⏳ РДП...</span>
-                  <span v-else>🖥️ РДП</span>
-                </button>
+                </button> -->
+                <div class="game-selector-wrapper">
+                  <select v-model="selectedGame[vm]" class="game-selector" :disabled="loading.launchRDP[vm]">
+                    <option value="">Выбрать игру</option>
+                    <option value="G-SYNC Pendulum Demo">G-SYNC Pendulum Demo</option>
+                  </select>
+                  <button @click.stop="launchRDP(vm)" class="btn-action-small btn-rdp" title="Запустить игру"
+                    :disabled="loading.launchRDP[vm] || !selectedGame[vm]">
+                    <span v-if="loading.launchRDP[vm]">⏳ Запуск...</span>
+                    <span v-else>🚀 Запустить Игру</span>
+                  </button>
+                </div>
                 <button @click.stop="stopRunningVM(vm)" class="btn-action-small btn-stop" title="Остановить"
                   :disabled="loading.stopVM[vm]">
                   <span v-if="loading.stopVM[vm]">⏳ Остановка...</span>
@@ -228,6 +239,7 @@ export default {
       logs: [],
       runningVMs: [],
       selectedRunningVM: "",
+      selectedGame: {}, // Выбранная игра для каждой ВМ
       vmReadyStates: {}, // Состояния готовности ВМ
       loading: {
         fetchVMs: false,
@@ -455,10 +467,10 @@ export default {
 
             this.$q.dialog({
               title: '🖥️ Подключение по РДП',
-              message: `Туннель готов к подключению<br><strong>Адрес:</strong> ${tunnelHost}:${tunnelPort}<br><br>Учетные данные:<br><strong>Пользователь:</strong> ggg<br><strong>Пароль:</strong> 123<br><br>Игра будет запущена автоматически при подключении.`,
+              message: `Туннель готов к подключению<br><br><strong>Команда для выполнения в PowerShell:</strong><br><code>${rdpCommand}</code><br><br><strong>Адрес:</strong> ${tunnelHost}:${tunnelPort}<br><strong>Пользователь:</strong> ggg<br><strong>Пароль:</strong> 123<br><br>Игра будет запущена автоматически при подключении.`,
               html: true,
               ok: {
-                label: '� Подключиться',
+                label: '🚀 Открыть PowerShell',
                 color: 'primary'
               },
               cancel: {
@@ -503,27 +515,14 @@ export default {
     },
     executeRDPCommand(rdpCommand) {
       console.log('executeRDPCommand вызвана с командой:', rdpCommand);
-      const match = rdpCommand.match(/mstsc \/v:([^:]+):(\d+)/);
-      if (match) {
-        const host = match[1];
-        const port = match[2];
-        window.location.href = `rdp://${host}:${port}`;
-        console.log(`Запуск RDP: rdp://${host}:${port}`);
-        this.$q.notify({
-          type: 'positive',
-          message: 'RDP подключение инициировано',
-          position: 'top-right',
-          timeout: 2000
-        });
-      } else {
-        console.error('Не удалось распарсить RDP команду:', rdpCommand);
-        this.$q.notify({
-          type: 'negative',
-          message: 'Ошибка при парсинге RDP команды',
-          position: 'top-right',
-          timeout: 3000
-        });
-      }
+      window.location.href = 'powershell://';
+      console.log('Запуск PowerShell');
+      this.$q.notify({
+        type: 'positive',
+        message: 'PowerShell открыт',
+        position: 'top-right',
+        timeout: 2000
+      });
     },
     async forceStopRunningVM(vmName = null) {
       const vm = vmName || this.selectedRunningVM;
@@ -1092,6 +1091,7 @@ export default {
 .vm-card-actions {
   display: flex;
   gap: 8px;
+  width: 100%;
 }
 
 .vm-running-actions {
@@ -1101,6 +1101,10 @@ export default {
 }
 
 .vm-running-actions .btn-action {
+  flex: 1;
+}
+
+.vm-card-actions .btn-action-small {
   flex: 1;
 }
 
@@ -1219,6 +1223,74 @@ export default {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.vm-status-indicator {
+  display: flex;
+  align-items: center;
+}
+
+.status-badge {
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.status-checking {
+  background: #fef3c7;
+  color: #92400e;
+  animation: pulse 1.5s infinite;
+}
+
+.status-ready {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-loading {
+  background: #dbeafe;
+  color: #0c4a6e;
+  animation: pulse 2s infinite;
+}
+
+.game-selector-wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.game-selector {
+  padding: 8px 12px;
+  border: 2px solid #cbd5e0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  background: white;
+  color: #2d3748;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 150px;
+}
+
+.game-selector:hover:not(:disabled) {
+  border-color: #a0aec0;
+}
+
+.game-selector:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.game-selector:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .btn-action-small {
