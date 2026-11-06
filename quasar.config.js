@@ -76,11 +76,12 @@ export default defineConfig((/* ctx */) => {
       open: true, // opens browser window automatically
       proxy: {
         '/api': {
-          target: 'https://sinthy.fvds.ru:9921',
+          target: process.env.API_TARGET || 'https://sinthy.fvds.ru:9921',
           changeOrigin: true,
+          ...(process.env.API_TARGET && { rewrite: (path) => path.replace(/^\/api/, '') }),
         },
         '/proxy': {
-          target: 'https://sinthy.fvds.ru:9921',
+          target: process.env.API_TARGET || 'https://sinthy.fvds.ru:9921',
           changeOrigin: true,
         },
       },

@@ -146,18 +146,18 @@
                     ⏳ Инициализация...
                   </span>
                 </div>
-                <!-- <button @click.stop="startAppOnVM({ name: vm })" class="btn-action-small btn-start-app"
+                <button @click.stop="startAppOnVM({ name: vm })" class="btn-action-small btn-start-app"
                   title="Запустить приложение" :disabled="loading.startApp[vm] || isAppButtonDisabled(vm)">
                   <span v-if="loading.startApp[vm]">⏳ Запуск...</span>
                   <span v-else-if="loading.checkReady[vm]">🔄 Проверка...</span>
                   <span v-else>📱 Приложение</span>
-                </button> -->
-                <!-- <button @click.stop="launchApp(vm)" class="btn-action-small btn-connect" title="Подключиться"
+                </button>
+                <button @click.stop="launchApp(vm)" class="btn-action-small btn-connect" title="Подключиться"
                   :disabled="loading.launchApp[vm]">
                   <span v-if="loading.launchApp[vm]">⏳ Подключение...</span>
                   <span v-else>🚀 Подключиться</span>
-                </button> -->
-                <div class="game-selector-wrapper">
+                </button>
+                <!-- <div class="game-selector-wrapper">
                   <select v-model="selectedGame[vm]" class="game-selector" :disabled="loading.launchRDP[vm]">
                     <option value="">Выбрать игру</option>
                     <option value="G-SYNC Pendulum Demo">G-SYNC Pendulum Demo</option>
@@ -167,7 +167,7 @@
                     <span v-if="loading.launchRDP[vm]">⏳ Запуск...</span>
                     <span v-else>🚀 Запустить Игру</span>
                   </button>
-                </div>
+                </div>  -->
                 <button @click.stop="stopRunningVM(vm)" class="btn-action-small btn-stop" title="Остановить"
                   :disabled="loading.stopVM[vm]">
                   <span v-if="loading.stopVM[vm]">⏳ Остановка...</span>
